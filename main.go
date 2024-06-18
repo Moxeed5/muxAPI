@@ -137,8 +137,21 @@ func deleteProduct(db *sql.DB) http.HandlerFunc {
 		vars := mux.Vars(r)
 		id := vars["id"]
 
-		if _, err := db.Exec("DELETE FROM products where id = $1", id); err != nil {
+		result, err := db.Exec("DELETE FROM products where id = $1", id)
+		if err != nil {
 			log.Fatal(err)
+		}
+
+		rowsAffected, err := result.RowsAffected()
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if rowsAffected == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode("Product not found")
+			return
 		}
 
 		json.NewEncoder(w).Encode("Product Deleted")
