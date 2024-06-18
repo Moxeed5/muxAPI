@@ -25,14 +25,19 @@ func main() {
 	}
 	defer db.Close()
 
+	//create if table does not exist
+	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name TEXT, quantity INT)"); err != nil {
+		log.Fatal(err)
+	}
+
 	//router
 	router := mux.NewRouter()
 	//route handlers
 	router.HandleFunc("/product", getProducts(db)).Methods("GET")
-	router.HandleFunc("/product/:id", getProductByID(db)).Methods("GET")
+	router.HandleFunc("/product/{id}", getProductByID(db)).Methods("GET")
 	router.HandleFunc("/product", addProduct(db)).Methods("POST")
-	router.HandleFunc("/product/:id", updateProduct(db)).Methods(("PUT"))
-	router.HandleFunc("/product/:id", deleteProduct(db)).Methods(("DELETE"))
+	router.HandleFunc("/product/{id}", updateProduct(db)).Methods(("PUT"))
+	router.HandleFunc("/product/{id}", deleteProduct(db)).Methods(("DELETE"))
 
 	//start server
 	log.Fatal(http.ListenAndServe(":8080", jsonContentTypeMiddleware(router)))
@@ -85,7 +90,8 @@ func getProductByID(db *sql.DB) http.HandlerFunc {
 		var p Product
 
 		if err := db.QueryRow("SELECT * FROM products WHERE id = $1", id).Scan(&p.ID, &p.Name, &p.Quantity); err != nil {
-			log.Fatal(err)
+			w.WriteHeader(http.StatusNotFound)
+			return
 		}
 
 		json.NewEncoder(w).Encode(p)
